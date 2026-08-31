@@ -1,0 +1,84 @@
+<div class="cp-panel">
+    <div class="inline-drawer">
+        <div class="inline-drawer-toggle inline-drawer-header">
+            <span class="cp-header-icon">📖</span>
+            <b>Chapter Planner</b>
+            <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
+        </div>
+        <div class="inline-drawer-content">
+
+            <!-- Statut du chapitre actif -->
+            <div class="cp-status-block">
+                <div class="cp-status-row">
+                    <span class="cp-label">Chapitre actif</span>
+                    <span class="cp-chapter-badge" id="cp-chapter-number">—</span>
+                </div>
+                <div class="cp-status-row">
+                    <span class="cp-label">Lorebook</span>
+                    <span class="cp-lorebook-name" id="cp-lorebook-name">Aucun</span>
+                </div>
+                <div class="cp-status-row">
+                    <span class="cp-label">Longueur prévue</span>
+                    <span class="cp-value" id="cp-chapter-length">—</span>
+                </div>
+                <div class="cp-status-row">
+                    <span class="cp-label">Événements planifiés</span>
+                    <span class="cp-value" id="cp-event-count">—</span>
+                </div>
+            </div>
+
+            <!-- Liste des événements -->
+            <div class="cp-events-section">
+                <div class="cp-section-title">Événements du chapitre</div>
+                <div id="cp-events-list" class="cp-events-list">
+                    <div class="cp-empty-state">Aucun chapitre planifié</div>
+                </div>
+            </div>
+
+            <hr class="cp-divider">
+
+            <!-- Configuration -->
+            <div class="cp-config-section">
+                <div class="cp-section-title">Configuration</div>
+
+                <label class="cp-field-label" for="cp-connection-profile">
+                    Profil de connexion (Chapter Planner)
+                </label>
+                <div class="cp-select-row">
+                    <select id="cp-connection-profile" class="cp-select text_pole">
+                        <option value="">— Sélectionner un profil —</option>
+                    </select>
+                    <button id="cp-refresh-profiles" class="cp-icon-btn menu_button" title="Actualiser la liste">
+                        <i class="fa-solid fa-rotate"></i>
+                    </button>
+                </div>
+
+                <label class="cp-field-label" for="cp-lorebook-prefix">
+                    Préfixe des Lorebooks générés
+                </label>
+                <input id="cp-lorebook-prefix" type="text" class="text_pole cp-input"
+                    placeholder="ex: Chapitre" value="Chapitre" />
+
+                <div class="cp-checkbox-row">
+                    <input type="checkbox" id="cp-auto-set-book" class="cp-checkbox" checked />
+                    <label for="cp-auto-set-book">Lier automatiquement le Lorebook au chat après génération</label>
+                </div>
+            </div>
+
+            <hr class="cp-divider">
+
+            <!-- Actions -->
+            <div class="cp-actions">
+                <button id="cp-btn-next-chapter" class="cp-btn cp-btn-primary menu_button">
+                    <i class="fa-solid fa-book-open"></i>
+                    Créer le chapitre suivant
+                </button>
+                <button id="cp-btn-reset-chapter" class="cp-btn cp-btn-danger menu_button">
+                    <i class="fa-solid fa-rotate-left"></i>
+                    Régénérer le chapitre actuel
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>

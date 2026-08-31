@@ -1,0 +1,16 @@
+{
+    "display_name": "Chapter Planner",
+    "loading_order": 10,
+    "js": "index.js",
+    "css": "style.css",
+    "author": "Chapter Planner Extension",
+    "version": "1.0.0",
+    "homePage": "https://github.com/your/chapter-planner",
+    "auto_update": false,
+    "minimum_client_version": "1.12.0",
+    "hooks": {
+        "activate": "onActivate",
+        "install": "onInstall",
+        "clean": "onClean"
+    }
+}

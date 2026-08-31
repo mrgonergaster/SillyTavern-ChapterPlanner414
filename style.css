@@ -1,0 +1,339 @@
+/* ═══════════════════════════════════════════
+   CHAPTER PLANNER — Extension styles
+   Intégration visuelle native SillyTavern
+═══════════════════════════════════════════ */
+
+/* ── Panneau principal ── */
+.cp-panel {
+    font-size: 0.9rem;
+}
+
+/* ── Bloc de statut ── */
+.cp-status-block {
+    background: var(--black-tinted, rgba(0,0,0,0.15));
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.cp-status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.cp-label {
+    color: var(--SmartThemeBodyColor, #aaa);
+    font-size: 0.82rem;
+    opacity: 0.8;
+    white-space: nowrap;
+}
+
+.cp-value {
+    font-weight: 500;
+    color: var(--SmartThemeBodyColor, #ddd);
+    font-size: 0.85rem;
+}
+
+.cp-chapter-badge {
+    background: var(--SmartThemeQuoteColor, #6c8ebf);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.9rem;
+    padding: 2px 10px;
+    border-radius: 12px;
+    min-width: 32px;
+    text-align: center;
+}
+
+.cp-lorebook-name {
+    color: var(--SmartThemeBodyColor, #ddd);
+    font-size: 0.82rem;
+    font-style: italic;
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 160px;
+}
+
+/* ── Section événements ── */
+.cp-events-section {
+    margin-bottom: 12px;
+}
+
+.cp-section-title {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--SmartThemeBodyColor, #aaa);
+    opacity: 0.6;
+    margin-bottom: 6px;
+}
+
+.cp-events-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 220px;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+.cp-empty-state {
+    color: var(--SmartThemeBodyColor, #888);
+    opacity: 0.5;
+    font-style: italic;
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 12px 0;
+}
+
+/* ── Carte d'événement ── */
+.cp-event-card {
+    background: var(--black-tinted, rgba(0,0,0,0.12));
+    border-left: 3px solid var(--SmartThemeQuoteColor, #6c8ebf);
+    border-radius: 0 5px 5px 0;
+    padding: 6px 10px;
+    cursor: default;
+    transition: background 0.15s;
+}
+
+.cp-event-card:hover {
+    background: var(--black-tinted, rgba(0,0,0,0.22));
+}
+
+.cp-event-card.cp-event-fired {
+    border-left-color: var(--SmartThemeEmColor, #7dbc7d);
+    opacity: 0.65;
+}
+
+.cp-event-header {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.cp-event-position {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--SmartThemeQuoteColor, #6c8ebf);
+    background: rgba(108,142,191,0.12);
+    padding: 1px 6px;
+    border-radius: 9px;
+    white-space: nowrap;
+}
+
+.cp-event-fired .cp-event-position {
+    color: var(--SmartThemeEmColor, #7dbc7d);
+    background: rgba(125,188,125,0.12);
+}
+
+.cp-event-title {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--SmartThemeBodyColor, #ddd);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cp-event-purpose {
+    font-size: 0.78rem;
+    color: var(--SmartThemeBodyColor, #aaa);
+    opacity: 0.7;
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── Configuration ── */
+.cp-config-section {
+    margin-bottom: 10px;
+}
+
+.cp-field-label {
+    display: block;
+    font-size: 0.82rem;
+    color: var(--SmartThemeBodyColor, #aaa);
+    opacity: 0.8;
+    margin: 8px 0 3px;
+}
+
+.cp-input {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.cp-select-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.cp-select {
+    flex: 1;
+    min-width: 0;
+}
+
+.cp-icon-btn {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cp-checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.cp-checkbox-row label {
+    font-size: 0.83rem;
+    cursor: pointer;
+    color: var(--SmartThemeBodyColor, #ccc);
+    line-height: 1.4;
+}
+
+/* ── Actions ── */
+.cp-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.cp-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 8px 12px;
+    font-size: 0.88rem;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+}
+
+.cp-btn:active {
+    transform: scale(0.98);
+}
+
+.cp-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.cp-btn-primary {
+    background: var(--SmartThemeQuoteColor, #6c8ebf);
+    color: #fff;
+    border: none;
+}
+
+.cp-btn-danger {
+    background: transparent;
+    border: 1px solid var(--SmartThemeBodyColor, #888);
+    color: var(--SmartThemeBodyColor, #ccc);
+    opacity: 0.7;
+}
+
+.cp-btn-danger:hover {
+    opacity: 1;
+    border-color: #e07070;
+    color: #e07070;
+}
+
+.cp-divider {
+    border: none;
+    border-top: 1px solid var(--black-tinted, rgba(255,255,255,0.08));
+    margin: 10px 0;
+}
+
+/* ── Bouton flottant dans le chat ── */
+#cp-float-btn {
+    position: fixed;
+    bottom: 80px;
+    right: 16px;
+    z-index: 1000;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--SmartThemeQuoteColor, #6c8ebf);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.35);
+    transition: transform 0.15s, box-shadow 0.15s, opacity 0.2s;
+    opacity: 0.85;
+}
+
+#cp-float-btn:hover {
+    transform: scale(1.08);
+    box-shadow: 0 5px 18px rgba(0,0,0,0.45);
+    opacity: 1;
+}
+
+#cp-float-btn:active {
+    transform: scale(0.95);
+}
+
+#cp-float-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+}
+
+#cp-float-btn .cp-float-spinner {
+    animation: cp-spin 0.8s linear infinite;
+}
+
+.cp-float-tooltip {
+    position: absolute;
+    right: 52px;
+    background: var(--black-tinted, rgba(20,20,20,0.9));
+    color: #fff;
+    font-size: 0.78rem;
+    padding: 4px 9px;
+    border-radius: 5px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+#cp-float-btn:hover .cp-float-tooltip {
+    opacity: 1;
+}
+
+@keyframes cp-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
+/* ── Scrollbar custom dans la liste événements ── */
+.cp-events-list::-webkit-scrollbar {
+    width: 4px;
+}
+.cp-events-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+.cp-events-list::-webkit-scrollbar-thumb {
+    background: var(--SmartThemeQuoteColor, #6c8ebf);
+    border-radius: 2px;
+    opacity: 0.5;
+}
