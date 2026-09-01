@@ -1,30 +1,8 @@
 /**
- * Chapter Planner — SillyTavern Extension
- * Gère la planification automatique de chapitres en roleplay.
+ * Chapter Planner — SillyTavern Extension v1.1
+ * Planification automatique de chapitres en roleplay.
+ * Utilise l'API getContext() officielle de SillyTavern.
  */
-
-import {
-    getContext,
-    renderExtensionTemplateAsync,
-    extension_settings,
-    saveMetadataDebounced,
-} from '../../../extensions.js';
-
-import {
-    eventSource,
-    event_types,
-    saveSettingsDebounced,
-    generateQuietPrompt,
-    chat_metadata,
-    substituteParams,
-} from '../../../../script.js';
-
-import { executeSlashCommands } from '../../../slash-commands.js';
-import { worldInfoCache } from '../../../world-info.js';
-
-// ═══════════════════════════════════════════════════════════
-// CONSTANTES
-// ═══════════════════════════════════════════════════════════
 
 const MODULE = 'chapter_planner';
 
@@ -36,91 +14,70 @@ const DEFAULT_SETTINGS = {
 
 const CHAPTER_PLANNER_PROMPT = `Your task is to design ONE complete narrative chapter for the CURRENT roleplay. This is NOT a script and it is NOT a sequence of predetermined actions. It is a flexible narrative framework describing what {{char}}, NPCs, factions and the world may do while preserving complete agency for {{user}}.
 
-================================================== AVAILABLE CONTEXT ==================================================
-Base your planning on ALL relevant information available in the current conversation context, including:
-- {{char}}'s definition - {{user}}'s definition - the current scenario - the established roleplay history
-- established relationships - unresolved conflicts - established worldbuilding
-- consequences of previous events - the current narrative and emotional situation
+Base your planning on ALL relevant information available in the current conversation context.
 The actual roleplay is CANON. Do not invent previous events that did not happen.
 
-================================================== ABSOLUTE USER AGENCY ==================================================
-NEVER determine anything for {{user}}. You must NEVER predetermine:
-- {{user}}'s actions - {{user}}'s dialogue - {{user}}'s thoughts - {{user}}'s emotions
-- {{user}}'s intentions - {{user}}'s decisions - {{user}}'s consent - {{user}}'s physical reactions
-You may create situations involving {{user}}. You may place {{user}} in danger.
-You may have NPCs speak to {{user}}. You may have {{char}} react to {{user}}.
-But {{user}} must always be free to decide what they do.
+NEVER determine anything for {{user}}: not their actions, dialogue, thoughts, emotions, intentions, decisions, consent, or physical reactions.
 
-================================================== CHAPTER PHILOSOPHY ==================================================
-A chapter is a narrative unit, NOT necessarily a dramatic arc. A chapter may be:
-a quiet character moment, a conversation, a relationship development, an investigation,
-a journey, exploration, slice of life, comedy, romance, mystery, political development,
-escalating conflict, combat, tragedy, a major turning point.
-Do NOT assume every chapter needs: combat, an antagonist, a betrayal, a crisis, a dramatic climax.
-A quiet chapter is completely valid.
+A chapter can be: a quiet moment, a conversation, an investigation, a journey, combat, romance, tragedy, or a major turning point. A quiet chapter is completely valid.
 
-================================================== PACING AND LENGTH ==================================================
-Choose the chapter length yourself. The chapter must contain between 3 and 70 BOT RESPONSES.
-- 3-7: Very short. Small development, brief interaction, minor event.
-- 8-14: Short. Limited but meaningful development.
-- 15-25: Medium. Several meaningful developments.
-- 26-40: Long. Substantial character, relationship, world or conflict development.
-- 41-55: Major. Multiple complications or significant consequences.
-- 56-70: Exceptional. Extensive development required.
-NEVER add filler. A short chapter that ends naturally is better than a long padded one.
+Choose the chapter length yourself (3 to 70 BOT RESPONSES):
+- 3-7: Very short. Small development.
+- 8-14: Short. Limited but meaningful.
+- 15-25: Medium. Several developments.
+- 26-40: Long. Substantial development.
+- 41-55: Major. Multiple complications.
+- 56-70: Exceptional. Extensive development.
 
-================================================== STRUCTURE ==================================================
-Create three broad narrative phases:
-BEGINNING: Introduce, establish or develop the chapter's central situation.
-MIDDLE: Develop through meaningful interactions, complications, discoveries or consequences.
-CONCLUSION: Reach a satisfying natural stopping point.
+NEVER add filler. Create only events that genuinely structure the chapter. Do NOT create an event for every position.
 
-================================================== EVENT PLANNING ==================================================
-Create only the events that genuinely help structure the chapter.
-Each event must contain: position, title, purpose, event, characters, constraints.
-POSITION = which bot response number triggers this event.
-Do NOT create an event for every position. Leave room for free roleplay.
-
-================================================== OUTPUT ==================================================
-Return ONLY valid JSON. No markdown. No code blocks. Exactly this structure:
+Return ONLY valid JSON, no markdown, no code blocks:
 {
   "chapter": {
     "title": "string",
     "length": 12,
     "tone": "string",
     "pacing": { "intensity": "low|medium|high|variable", "rhythm": "slow|moderate|fast|variable", "reason_for_length": "string" },
-    "beginning": "string", "middle": "string", "conclusion": "string"
+    "beginning": "string",
+    "middle": "string",
+    "conclusion": "string"
   },
   "events": [
-    { "position": 5, "title": "string", "purpose": "string", "event": "string", "characters": ["string"], "constraints": ["string"] }
+    {
+      "position": 5,
+      "title": "string",
+      "purpose": "string",
+      "event": "string",
+      "characters": ["string"],
+      "constraints": ["string"]
+    }
   ]
-}
-Rules: length 3-70. position 1 to length. events ordered. events NOT at every position.`;
+}`;
 
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 // ÉTAT
-// ═══════════════════════════════════════════════════════════
-
+// ═══════════════════════════════════════════════════════
 let currentChapterPlan = null;
 
-// ═══════════════════════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════════════════════
-
+// ═══════════════════════════════════════════════════════
+// INIT — attendre que ST soit prêt
+// ═══════════════════════════════════════════════════════
 jQuery(async () => {
+    const ctx = SillyTavern.getContext();
+
     // Initialiser les settings
-    if (!extension_settings[MODULE]) {
-        extension_settings[MODULE] = Object.assign({}, DEFAULT_SETTINGS);
+    if (!ctx.extensionSettings[MODULE]) {
+        ctx.extensionSettings[MODULE] = { ...DEFAULT_SETTINGS };
     }
     for (const key of Object.keys(DEFAULT_SETTINGS)) {
-        if (extension_settings[MODULE][key] === undefined) {
-            extension_settings[MODULE][key] = DEFAULT_SETTINGS[key];
+        if (ctx.extensionSettings[MODULE][key] === undefined) {
+            ctx.extensionSettings[MODULE][key] = DEFAULT_SETTINGS[key];
         }
     }
 
-    // Injecter le panneau HTML
-    const html = await renderExtensionTemplateAsync(`third-party/${MODULE}`, 'settings');
-    $('#extensions_settings2').append(html);
+    // Injecter le panneau HTML dans les settings d'extensions
+    const panelHtml = buildPanelHTML();
+    $('#extensions_settings2').append(panelHtml);
 
     // Bouton flottant
     injectFloatButton();
@@ -128,80 +85,147 @@ jQuery(async () => {
     // Lier les événements UI
     bindUI();
 
-    // Remplir la liste des profils
-    await populateProfiles();
-
-    // Charger le plan depuis les metadata du chat courant
+    // Charger le plan du chat courant
     loadPlanFromMetadata();
-
-    // Rafraîchir le panneau
     renderPanel();
 
     // Écouter les changements de chat
-    eventSource.on(event_types.CHAT_CHANGED, onChatChanged);
+    ctx.eventSource.on(ctx.event_types.CHAT_CHANGED, () => {
+        loadPlanFromMetadata();
+        renderPanel();
+    });
 
-    console.log(`[${MODULE}] Initialisé`);
+    console.log(`[${MODULE}] Extension chargée ✓`);
 });
 
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 // SETTINGS
-// ═══════════════════════════════════════════════════════════
-
+// ═══════════════════════════════════════════════════════
 function getSettings() {
-    return extension_settings[MODULE];
+    return SillyTavern.getContext().extensionSettings[MODULE];
 }
 
-// ═══════════════════════════════════════════════════════════
-// PERSISTANCE (chat_metadata)
-// ═══════════════════════════════════════════════════════════
-
+// ═══════════════════════════════════════════════════════
+// PERSISTANCE
+// ═══════════════════════════════════════════════════════
 function loadPlanFromMetadata() {
     try {
-        currentChapterPlan = chat_metadata[`${MODULE}_plan`] ?? null;
-    } catch (e) {
+        const { chatMetadata } = SillyTavern.getContext();
+        currentChapterPlan = chatMetadata?.[`${MODULE}_plan`] ?? null;
+    } catch {
         currentChapterPlan = null;
     }
 }
 
 async function savePlanToMetadata(plan) {
-    chat_metadata[`${MODULE}_plan`] = plan;
-    saveMetadataDebounced();
+    const ctx = SillyTavern.getContext();
+    if (ctx.chatMetadata) {
+        ctx.chatMetadata[`${MODULE}_plan`] = plan;
+        ctx.saveMetadata?.();
+    }
 }
 
-async function clearPlanFromMetadata() {
-    delete chat_metadata[`${MODULE}_plan`];
-    saveMetadataDebounced();
+// ═══════════════════════════════════════════════════════
+// HTML DU PANNEAU (inline pour éviter renderExtensionTemplateAsync)
+// ═══════════════════════════════════════════════════════
+function buildPanelHTML() {
+    return `
+<div class="cp-panel">
+  <div class="inline-drawer">
+    <div class="inline-drawer-toggle inline-drawer-header">
+      <span>📖</span>
+      <b>Chapter Planner</b>
+      <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
+    </div>
+    <div class="inline-drawer-content">
+
+      <div class="cp-status-block">
+        <div class="cp-status-row">
+          <span class="cp-label">Chapitre actif</span>
+          <span class="cp-chapter-badge" id="cp-chapter-number">—</span>
+        </div>
+        <div class="cp-status-row">
+          <span class="cp-label">Lorebook</span>
+          <span class="cp-lorebook-name" id="cp-lorebook-name">Aucun</span>
+        </div>
+        <div class="cp-status-row">
+          <span class="cp-label">Longueur prévue</span>
+          <span class="cp-value" id="cp-chapter-length">—</span>
+        </div>
+        <div class="cp-status-row">
+          <span class="cp-label">Événements</span>
+          <span class="cp-value" id="cp-event-count">—</span>
+        </div>
+      </div>
+
+      <div class="cp-section-title">Événements du chapitre</div>
+      <div id="cp-events-list" class="cp-events-list">
+        <div class="cp-empty-state">Aucun chapitre planifié</div>
+      </div>
+
+      <hr class="cp-divider">
+
+      <div class="cp-section-title">Configuration</div>
+
+      <label class="cp-field-label">Profil de connexion (Chapter Planner)</label>
+      <div class="cp-select-row">
+        <select id="cp-connection-profile" class="cp-select text_pole">
+          <option value="">— Sélectionner un profil —</option>
+        </select>
+        <button id="cp-refresh-profiles" class="menu_button cp-icon-btn" title="Actualiser">
+          <i class="fa-solid fa-rotate"></i>
+        </button>
+      </div>
+
+      <label class="cp-field-label">Préfixe des Lorebooks</label>
+      <input id="cp-lorebook-prefix" type="text" class="text_pole cp-input" value="Chapitre" />
+
+      <div class="cp-checkbox-row">
+        <input type="checkbox" id="cp-auto-set-book" checked />
+        <label for="cp-auto-set-book">Lier automatiquement le Lorebook au chat</label>
+      </div>
+
+      <hr class="cp-divider">
+
+      <div class="cp-actions">
+        <button id="cp-btn-next-chapter" class="menu_button cp-btn cp-btn-primary">
+          <i class="fa-solid fa-book-open"></i> Créer le chapitre suivant
+        </button>
+        <button id="cp-btn-reset-chapter" class="menu_button cp-btn cp-btn-danger">
+          <i class="fa-solid fa-rotate-left"></i> Régénérer le chapitre actuel
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>`;
 }
 
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 // BOUTON FLOTTANT
-// ═══════════════════════════════════════════════════════════
-
+// ═══════════════════════════════════════════════════════
 function injectFloatButton() {
     if ($('#cp-float-btn').length) return;
-    const btn = $(`
-        <button id="cp-float-btn" title="Chapter Planner">
+    $('body').append(`
+        <button id="cp-float-btn" title="Chapter Planner — Créer le chapitre suivant">
             <i class="fa-solid fa-book-bookmark"></i>
-            <span class="cp-float-tooltip">Créer le chapitre suivant</span>
         </button>
     `);
-    btn.on('click', () => onCreateChapter(false));
-    $('body').append(btn);
+    $('#cp-float-btn').on('click', () => onCreateChapter(false));
 }
 
 function setFloatBtnLoading(loading) {
-    const btn = $('#cp-float-btn');
-    btn.prop('disabled', loading);
-    btn.html(loading
-        ? '<i class="fa-solid fa-spinner cp-float-spinner"></i><span class="cp-float-tooltip">Génération…</span>'
-        : '<i class="fa-solid fa-book-bookmark"></i><span class="cp-float-tooltip">Créer le chapitre suivant</span>'
+    const $btn = $('#cp-float-btn');
+    $btn.prop('disabled', loading);
+    $btn.html(loading
+        ? '<i class="fa-solid fa-spinner cp-float-spinner"></i>'
+        : '<i class="fa-solid fa-book-bookmark"></i>'
     );
 }
 
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 // UI
-// ═══════════════════════════════════════════════════════════
-
+// ═══════════════════════════════════════════════════════
 function bindUI() {
     $(document).on('click', '#cp-btn-next-chapter', () => onCreateChapter(false));
     $(document).on('click', '#cp-btn-reset-chapter', () => onCreateChapter(true));
@@ -211,44 +235,47 @@ function bindUI() {
     });
     $(document).on('change', '#cp-connection-profile', () => {
         getSettings().connectionProfile = $('#cp-connection-profile').val();
-        saveSettingsDebounced();
+        SillyTavern.getContext().saveSettingsDebounced();
     });
     $(document).on('input', '#cp-lorebook-prefix', () => {
         getSettings().lorebookPrefix = $('#cp-lorebook-prefix').val() || 'Chapitre';
-        saveSettingsDebounced();
+        SillyTavern.getContext().saveSettingsDebounced();
     });
     $(document).on('change', '#cp-auto-set-book', () => {
         getSettings().autoSetBook = $('#cp-auto-set-book').prop('checked');
-        saveSettingsDebounced();
+        SillyTavern.getContext().saveSettingsDebounced();
     });
+
+    // Charger les profils une fois le DOM prêt
+    populateProfiles();
 }
 
 async function populateProfiles() {
     try {
-        const response = await fetch('/api/settings/get', {
+        const r = await fetch('/api/settings/get', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({}),
         });
-        if (!response.ok) throw new Error('Échec');
-        const data = await response.json();
+        if (!r.ok) throw new Error();
+        const data = await r.json();
         const profiles = data?.connectionProfiles ?? [];
-        const $select = $('#cp-connection-profile');
+        const $sel = $('#cp-connection-profile');
         const current = getSettings().connectionProfile;
-        $select.empty().append('<option value="">— Sélectionner un profil —</option>');
+        $sel.empty().append('<option value="">— Sélectionner un profil —</option>');
         for (const p of profiles) {
             const name = typeof p === 'string' ? p : p.name;
-            $select.append(`<option value="${name}">${name}</option>`);
+            $sel.append(`<option value="${name}">${name}</option>`);
         }
-        if (current) $select.val(current);
-    } catch (e) {
-        console.warn(`[${MODULE}] Impossible de charger les profils:`, e);
+        if (current) $sel.val(current);
+    } catch {
+        console.warn(`[${MODULE}] Impossible de charger les profils`);
     }
 }
 
 function renderPanel() {
     const s = getSettings();
-    $('#cp-connection-profile').val(s.connectionProfile);
+    if (s.connectionProfile) $('#cp-connection-profile').val(s.connectionProfile);
     $('#cp-lorebook-prefix').val(s.lorebookPrefix);
     $('#cp-auto-set-book').prop('checked', s.autoSetBook);
 
@@ -261,22 +288,14 @@ function renderPanel() {
         return;
     }
 
-    const plan = currentChapterPlan;
-    const lorebookName = `${s.lorebookPrefix} ${plan.chapterNumber}`;
-    $('#cp-chapter-number').text(plan.chapterNumber);
-    $('#cp-lorebook-name').text(lorebookName);
-    $('#cp-chapter-length').text(`${plan.chapter.length} réponses bot`);
-    $('#cp-event-count').text(`${plan.events.length} événement${plan.events.length > 1 ? 's' : ''}`);
-    renderEventsList(plan.events);
-}
+    const { chapterNumber, chapter, events } = currentChapterPlan;
+    const lbName = `${s.lorebookPrefix} ${chapterNumber}`;
+    $('#cp-chapter-number').text(chapterNumber);
+    $('#cp-lorebook-name').text(lbName);
+    $('#cp-chapter-length').text(`${chapter.length} réponses bot`);
+    $('#cp-event-count').text(`${events.length} événement${events.length > 1 ? 's' : ''}`);
 
-function renderEventsList(events) {
-    const $list = $('#cp-events-list');
-    $list.empty();
-    if (!events?.length) {
-        $list.html('<div class="cp-empty-state">Aucun événement planifié</div>');
-        return;
-    }
+    const $list = $('#cp-events-list').empty();
     for (const ev of events) {
         $list.append(`
             <div class="cp-event-card" title="${esc(ev.purpose)}">
@@ -290,43 +309,32 @@ function renderEventsList(events) {
     }
 }
 
-function esc(str) {
-    return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ═══════════════════════════════════════════════════════════
-// ÉVÉNEMENTS
-// ═══════════════════════════════════════════════════════════
-
-function onChatChanged() {
-    loadPlanFromMetadata();
-    renderPanel();
-}
-
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 // CRÉATION DE CHAPITRE
-// ═══════════════════════════════════════════════════════════
-
+// ═══════════════════════════════════════════════════════
 async function onCreateChapter(regenerate = false) {
     const s = getSettings();
+    const ctx = SillyTavern.getContext();
 
     if (!s.connectionProfile) {
-        toastr.warning('Sélectionnez un profil de connexion dans les paramètres de l\'extension.');
+        toastr.warning('Sélectionnez un profil de connexion dans les paramètres Chapter Planner.');
         return;
     }
-
-    const ctx = getContext();
     if (!ctx.chat?.length) {
         toastr.warning('Aucun chat actif.');
         return;
     }
 
     if (regenerate && currentChapterPlan) {
-        const confirmed = await callPopup(
-            `Régénérer le chapitre ${currentChapterPlan.chapterNumber} ? Son Lorebook sera entièrement recréé.`,
-            'confirm'
+        const ok = await ctx.Popup?.show?.confirm(
+            'Régénérer le chapitre ?',
+            `Le chapitre ${currentChapterPlan.chapterNumber} sera entièrement recréé.`
         );
-        if (!confirmed) return;
+        if (!ok) return;
     }
 
     const chapterNumber = (regenerate && currentChapterPlan)
@@ -335,46 +343,45 @@ async function onCreateChapter(regenerate = false) {
 
     setFloatBtnLoading(true);
     $('#cp-btn-next-chapter, #cp-btn-reset-chapter').prop('disabled', true);
-
     toastr.info(`Planification du chapitre ${chapterNumber}…`, '', { timeOut: 0, tapToDismiss: false });
 
     try {
         // 1. Changer de profil
-        await executeSlashCommands(`/profile ${s.connectionProfile}`);
+        await ctx.executeSlashCommandsWithOptions?.(`/profile ${s.connectionProfile}`);
 
-        // 2. Générer le plan
-        const contextHint = currentChapterPlan
-            ? `Tu dois planifier le CHAPITRE ${chapterNumber}. Le chapitre précédent était : "${currentChapterPlan.chapter.title}" (${currentChapterPlan.chapter.tone}). Conclusion précédente : ${currentChapterPlan.chapter.conclusion}.`
-            : `Tu dois planifier le CHAPITRE ${chapterNumber} (premier chapitre du roleplay).`;
+        // 2. Construire le prompt contextuel
+        let contextHint = `Tu dois planifier le CHAPITRE ${chapterNumber}`;
+        if (currentChapterPlan && chapterNumber > 1) {
+            contextHint += `. Chapitre précédent : "${currentChapterPlan.chapter.title}" (${currentChapterPlan.chapter.tone}). Conclusion : ${currentChapterPlan.chapter.conclusion}`;
+        }
+        const fullPrompt = `${contextHint}.\n\n${CHAPTER_PLANNER_PROMPT}`;
 
-        const fullPrompt = substituteParams(`${contextHint}\n\n${CHAPTER_PLANNER_PROMPT}`);
-        const rawResult = await generateQuietPrompt(fullPrompt, false, false);
+        // 3. Générer le plan
+        const raw = await ctx.generateQuietPrompt(fullPrompt, false, false);
+        if (!raw?.trim()) throw new Error('Le modèle n\'a rien retourné.');
 
-        if (!rawResult?.trim()) throw new Error('Le modèle n\'a retourné aucune réponse.');
-
-        // 3. Parser le JSON
-        const plan = parseJSON(rawResult);
+        const plan = parseJSON(raw);
         validatePlan(plan);
 
         toastr.clear();
         toastr.info('Création du Lorebook…', '', { timeOut: 0, tapToDismiss: false });
 
         // 4. Créer le Lorebook
-        const lorebookName = `${s.lorebookPrefix} ${chapterNumber}`;
-        await createLorebook(lorebookName, plan.events);
+        const lbName = `${s.lorebookPrefix} ${chapterNumber}`;
+        await createLorebook(lbName, plan.events);
 
         // 5. Lier au chat
         if (s.autoSetBook) {
-            await executeSlashCommands(`/setchatbook ${lorebookName}`);
+            await ctx.executeSlashCommandsWithOptions?.(`/setchatbook ${lbName}`);
         }
 
-        // 6. Sauvegarder
+        // 6. Sauvegarder et afficher
         currentChapterPlan = { chapterNumber, ...plan };
         await savePlanToMetadata(currentChapterPlan);
         renderPanel();
 
         toastr.clear();
-        toastr.success(`Chapitre ${chapterNumber} prêt — ${plan.events.length} événement(s) dans "${lorebookName}".`);
+        toastr.success(`Chapitre ${chapterNumber} prêt — ${plan.events.length} événement(s) dans "${lbName}".`);
 
     } catch (err) {
         toastr.clear();
@@ -386,45 +393,35 @@ async function onCreateChapter(regenerate = false) {
     }
 }
 
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 // JSON
-// ═══════════════════════════════════════════════════════════
-
+// ═══════════════════════════════════════════════════════
 function parseJSON(raw) {
-    let s = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
-    try { return JSON.parse(s); } catch (_) {}
+    let s = raw.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/i,'').trim();
+    try { return JSON.parse(s); } catch {}
     const a = s.indexOf('{'), b = s.lastIndexOf('}');
-    if (a !== -1 && b !== -1) {
-        try { return JSON.parse(s.slice(a, b + 1)); } catch (_) {}
-    }
-    throw new Error('Impossible de parser le JSON retourné par le modèle.');
+    if (a !== -1 && b !== -1) try { return JSON.parse(s.slice(a, b+1)); } catch {}
+    throw new Error('JSON invalide retourné par le modèle.');
 }
 
 function validatePlan(plan) {
     if (!plan?.chapter) throw new Error('Champ "chapter" manquant.');
-    if (typeof plan.chapter.length !== 'number') throw new Error('Longueur de chapitre invalide.');
-    if (!Array.isArray(plan.events)) throw new Error('Champ "events" manquant.');
+    if (typeof plan.chapter.length !== 'number') throw new Error('"length" invalide.');
+    if (!Array.isArray(plan.events)) throw new Error('"events" manquant.');
     const len = plan.chapter.length;
     if (len < 3 || len > 70) throw new Error(`Longueur invalide : ${len}`);
-    for (const ev of plan.events) {
+    for (const ev of plan.events)
         if (ev.position < 1 || ev.position > len) throw new Error(`Position invalide : ${ev.position}`);
-    }
 }
 
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 // LOREBOOK
-// ═══════════════════════════════════════════════════════════
-
+// ═══════════════════════════════════════════════════════
 async function createLorebook(name, events) {
     const entries = {};
     events.forEach((ev, i) => {
         const uid = i + 1;
-        const lines = [
-            `[Événement narratif — ${ev.title}]`,
-            `Objectif : ${ev.purpose}`,
-            '',
-            ev.event,
-        ];
+        const lines = [`[Événement — ${ev.title}]`, `Objectif : ${ev.purpose}`, '', ev.event];
         if (ev.characters?.length) lines.push('', `Personnages : ${ev.characters.join(', ')}`);
         if (ev.constraints?.length) lines.push('', 'Contraintes :', ...ev.constraints.map(c => `- ${c}`));
 
@@ -442,16 +439,12 @@ async function createLorebook(name, events) {
         };
     });
 
-    const response = await fetch('/api/worldinfo/edit', {
+    const r = await fetch('/api/worldinfo/edit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, data: { name, entries } }),
     });
 
-    if (!response.ok) {
-        const txt = await response.text();
-        throw new Error(`Erreur Lorebook (${response.status}): ${txt}`);
-    }
-
+    if (!r.ok) throw new Error(`Erreur Lorebook (${r.status}): ${await r.text()}`);
     console.log(`[${MODULE}] Lorebook "${name}" créé avec ${events.length} entrées`);
 }

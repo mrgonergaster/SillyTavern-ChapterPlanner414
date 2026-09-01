@@ -1,11 +1,10 @@
 {
     "display_name": "Chapter Planner",
+    "name": "SillyTavern-ChapterPlanner414",
+    "version": "1.1.0",
+    "author": "mrgonergaster",
+    "description": "Planification automatique de chapitres narratifs avec Chat Lorebook.",
     "loading_order": 10,
     "js": "index.js",
-    "css": "style.css",
-    "html": "settings.html",
-    "author": "mrgonergaster",
-    "version": "1.0.0",
-    "homePage": "https://github.com/mrgonergaster/SillyTavern-ChapterPlanner414",
-    "auto_update": true
+    "css": "style.css"
 }
