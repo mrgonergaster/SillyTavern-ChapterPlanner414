@@ -3,14 +3,9 @@
     "loading_order": 10,
     "js": "index.js",
     "css": "style.css",
-    "author": "Chapter Planner Extension",
+    "html": "settings.html",
+    "author": "mrgonergaster",
     "version": "1.0.0",
-    "homePage": "https://github.com/your/chapter-planner",
-    "auto_update": false,
-    "minimum_client_version": "1.12.0",
-    "hooks": {
-        "activate": "onActivate",
-        "install": "onInstall",
-        "clean": "onClean"
-    }
+    "homePage": "https://github.com/mrgonergaster/SillyTavern-ChapterPlanner414",
+    "auto_update": true
 }
